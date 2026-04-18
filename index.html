@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>In-House Vahaan & MMV Mapping Pipeline — Insure24 · Cars24</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f4f3ef;
+    --bg2: #ffffff;
+    --bg3: #ece9e2;
+    --text: #18181a;
+    --text2: #46464a;
+    --text3: #8a8a8e;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+
+    /* accent — deep slate blue */
+    --accent: #1c2340;
+    --accent2: #2d3a6b;
+
+    /* semantic ramps */
+    --blue50: #e8f0fd; --blue100: #bdd0f9; --blue400: #4a7ef5; --blue600: #1d4ed8; --blue800: #1e3a8a;
+    --teal50: #e0f5ef; --teal100: #9fe0cb; --teal400: #1fad7e; --teal600: #0f6e56; --teal800: #084f3c;
+    --purple50: #eeecfd; --purple100: #cdc9f5; --purple400: #7c74dc; --purple600: #4f44bb; --purple800: #3a3189;
+    --amber50: #fdf0db; --amber100: #fac876; --amber400: #e09a20; --amber600: #8a5008; --amber800: #633a05;
+    --green50: #e8f5de; --green100: #bfe097; --green400: #5fa31e; --green600: #3a6d10; --green800: #264d09;
+    --coral50: #faeae6; --coral100: #f4c0ae; --coral400: #db6040; --coral600: #9a3c1e; --coral800: #712b13;
+    --red50: #fde8e8; --red100: #f7bfbf; --red600: #a32d2d;
+    --gray50: #f1ede8; --gray100: #d2cfc7; --gray600: #5e5d5a; --gray800: #3a3937;
+  }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .top-band {
+    background: var(--accent);
+    color: #fff;
+    padding: 36px 48px 30px;
+    position: relative;
+    overflow: hidden;
+  }
+  .top-band::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 260px; height: 260px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.06);
+    pointer-events: none;
+  }
+  .top-band::after {
+    content: '';
+    position: absolute;
+    bottom: -50px; left: 160px;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.04);
+    pointer-events: none;
+  }
+  .top-eyebrow {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .top-title {
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.25;
+    margin-bottom: 5px;
+    color: #fff;
+  }
+  .top-sub {
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  .top-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .top-tag {
+    font-size: 10px;
+    font-weight: 500;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.75);
+    border: 1px solid rgba(255,255,255,0.11);
+  }
+
+  /* ── LAYOUT ── */
+  .main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 36px 24px 64px;
+  }
+
+  /* ── CONTROLS ── */
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    justify-content: flex-end;
+  }
+  .ctrl-btn {
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border2);
+    background: var(--bg2);
+    color: var(--text2);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .ctrl-btn:hover { background: var(--bg3); }
+
+  /* ── PHASE BLOCK ── */
+  .phase-block {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 14px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+  .phase-block:hover { box-shadow: 0 2px 18px rgba(0,0,0,0.06); }
+
+  .phase-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .phase-header:hover { background: var(--bg3); }
+  .phase-header.open { border-bottom-color: var(--border); }
+
+  .phase-num {
+    font-size: 10px;
+    font-weight: 500;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text3);
+    min-width: 28px;
+  }
+  .phase-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .phase-title-text {
+    font-size: 14px;
+    font-weight: 500;
+    flex: 1;
+    color: var(--text);
+  }
+  .phase-badge {
+    font-size: 10px;
+    font-weight: 500;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 3px 9px;
+    border-radius: 20px;
+  }
+  .chevron {
+    font-size: 10px;
+    color: var(--text3);
+    transition: transform 0.2s;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .chevron.open { transform: rotate(90deg); }
+
+  .phase-body { padding: 20px; display: block; }
+  .phase-body.collapsed { display: none; }
+
+  .phase-connector {
+    text-align: center;
+    padding: 4px 0;
+    color: var(--text3);
+    font-size: 14px;
+  }
+
+  /* ── SECTION LABEL ── */
+  .section-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin: 12px 0 7px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* ── CARDS ── */
+  .cards-grid { display: grid; gap: 10px; margin-top: 8px; }
+  .cards-2 { grid-template-columns: repeat(2, 1fr); }
+  .cards-3 { grid-template-columns: repeat(3, 1fr); }
+  .cards-auto { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+
+  @media (max-width: 640px) {
+    .cards-2, .cards-3 { grid-template-columns: 1fr; }
+    .top-band { padding: 24px 18px 20px; }
+    .main { padding: 20px 12px 48px; }
+  }
+
+  .card {
+    border-radius: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .card-title { font-size: 12px; font-weight: 500; margin-bottom: 5px; color: var(--text); }
+  .card-body { font-size: 11px; color: var(--text2); line-height: 1.55; }
+  .card-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 500;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 2px 7px;
+    border-radius: 10px;
+    margin-top: 6px; margin-right: 3px;
+  }
+
+  /* ── SUB GRID ── */
+  .sub-grid {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+  .mini-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 9px 12px;
+    font-size: 11px;
+  }
+  .mini-card strong { font-weight: 500; font-size: 11px; display: block; margin-bottom: 3px; color: var(--text); }
+  .mini-card span { color: var(--text2); font-size: 10.5px; line-height: 1.45; }
+
+  /* ── HIGHLIGHT BOX ── */
+  .highlight-box {
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin-top: 10px;
+    border: 1px solid;
+    font-size: 11px;
+    line-height: 1.65;
+  }
+  .h-amber  { background: var(--amber50);  border-color: var(--amber100);  color: var(--amber800); }
+  .h-teal   { background: var(--teal50);   border-color: var(--teal100);   color: var(--teal800); }
+  .h-blue   { background: var(--blue50);   border-color: var(--blue100);   color: var(--blue800); }
+  .h-purple { background: var(--purple50); border-color: var(--purple100); color: var(--purple800); }
+  .h-red    { background: var(--red50);    border-color: var(--red100);    color: var(--red600); }
+  .h-green  { background: var(--green50);  border-color: var(--green100);  color: var(--green800); }
+  .h-coral  { background: var(--coral50);  border-color: var(--coral100);  color: var(--coral800); }
+
+  /* ── FUNNEL ── */
+  .funnel-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .funnel-node {
+    padding: 5px 13px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid;
+  }
+  .funnel-arrow { font-size: 11px; color: var(--text3); }
+
+  /* ── IMPACT ── */
+  .impact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .impact-card {
+    text-align: center;
+    padding: 16px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--green100);
+    background: var(--green50);
+  }
+  .impact-num {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--green600);
+    margin-bottom: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .impact-label { font-size: 10px; color: var(--green800); line-height: 1.4; }
+
+  /* ── INCIDENT BLOCK ── */
+  .incident-block {
+    border-radius: 10px;
+    border: 1.5px solid var(--red100);
+    background: var(--red50);
+    padding: 14px 16px;
+    margin-top: 12px;
+  }
+  .incident-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--red600);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .incident-body { font-size: 11px; color: #7a2020; line-height: 1.6; }
+
+  /* ── FORMULA BOX ── */
+  .formula-box {
+    background: var(--accent);
+    color: #c8d8ff;
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+    margin-top: 10px;
+    overflow-x: auto;
+  }
+  .formula-comment { color: rgba(255,255,255,0.35); font-size: 10px; }
+
+  /* ── BEFORE/AFTER ── */
+  .ba-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  @media (max-width: 560px) { .ba-grid { grid-template-columns: 1fr; } }
+  .ba-card {
+    border-radius: 8px;
+    padding: 12px 14px;
+    border: 1px solid;
+  }
+  .ba-label {
+    font-size: 10px;
+    font-weight: 500;
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.07em;
+    margin-bottom: 6px;
+  }
+  .ba-before { background: var(--red50); border-color: var(--red100); }
+  .ba-before .ba-label { color: var(--red600); }
+  .ba-after  { background: var(--green50); border-color: var(--green100); }
+  .ba-after  .ba-label { color: var(--green600); }
+
+  /* TAG COLORS */
+  .tag-blue   { background: var(--blue50);   color: var(--blue600); }
+  .tag-green  { background: var(--green50);  color: var(--green600); }
+  .tag-amber  { background: var(--amber50);  color: var(--amber600); }
+  .tag-purple { background: var(--purple50); color: var(--purple600); }
+  .tag-coral  { background: var(--coral50);  color: var(--coral600); }
+  .tag-teal   { background: var(--teal50);   color: var(--teal600); }
+  .tag-gray   { background: var(--gray50);   color: var(--gray600); }
+  .tag-red    { background: var(--red50);    color: var(--red600); }
+
+  /* DOT */
+  .dot-blue   { background: #4a7ef5; }
+  .dot-teal   { background: #1fad7e; }
+  .dot-amber  { background: #e09a20; }
+  .dot-purple { background: #7c74dc; }
+  .dot-coral  { background: #db6040; }
+  .dot-green  { background: #5fa31e; }
+  .dot-gray   { background: #8a8a8e; }
+  .dot-red    { background: #d04040; }
+
+  /* BADGE */
+  .badge-blue   { background: var(--blue50);   color: var(--blue600); }
+  .badge-teal   { background: var(--teal50);   color: var(--teal600); }
+  .badge-amber  { background: var(--amber50);  color: var(--amber600); }
+  .badge-purple { background: var(--purple50); color: var(--purple600); }
+  .badge-coral  { background: var(--coral50);  color: var(--coral600); }
+  .badge-green  { background: var(--green50);  color: var(--green600); }
+  .badge-gray   { background: var(--gray50);   color: var(--gray600); }
+  .badge-red    { background: var(--red50);    color: var(--red600); }
+
+  .row-label {
+    font-size: 11px; font-weight: 500;
+    color: var(--text2); margin: 10px 0 5px;
+  }
+
+  .footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 11px;
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+    border-top: 1px solid var(--border);
+    margin-top: 20px;
+  }
+
+  @media print {
+    .phase-body.collapsed { display: block !important; }
+    .top-band { background: var(--accent) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="top-band">
+  <div class="top-eyebrow">Cars24 · Insure24 Platform · MLOps + ML</div>
+  <div class="top-title">In-House Vahaan &amp; MMV Mapping Pipeline</div>
+  <div class="top-sub">Replaced third-party vendor dependency with an internal BM25-powered matching engine · Owned end-to-end</div>
+  <div class="top-tags">
+    <span class="top-tag">BM25 Matching</span>
+    <span class="top-tag">FastAPI</span>
+    <span class="top-tag">Signzy Integration</span>
+    <span class="top-tag">MongoDB</span>
+    <span class="top-tag">GitHub Actions CI/CD</span>
+    <span class="top-tag">ArgoCD</span>
+    <span class="top-tag">Amazon EC2</span>
+    <span class="top-tag">&gt;95% accuracy</span>
+    <span class="top-tag">₹1.5Cr annual saving</span>
+    <span class="top-tag">Async Python</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="controls">
+    <button class="ctrl-btn" onclick="expandAll()">Expand all</button>
+    <button class="ctrl-btn" onclick="collapseAll()">Collapse all</button>
+  </div>
+
+  <!-- PHASE 0: BUSINESS PROBLEM -->
+  <div class="phase-block" id="p0">
+    <div class="phase-header open" onclick="toggle('p0')">
+      <div class="phase-num">00</div>
+      <div class="phase-dot dot-blue"></div>
+      <div class="phase-title-text">Business problem — third-party vendor dependency</div>
+      <span class="phase-badge badge-blue">Context</span>
+      <span class="chevron open" id="ch-p0">▶</span>
+    </div>
+    <div class="phase-body" id="b-p0">
+
+      <div class="section-label">How insurance pricing worked before this project</div>
+      <div class="funnel-row">
+        <div class="funnel-node" style="background:var(--blue50);border-color:var(--blue100);color:var(--blue600);">User enters vehicle no.</div>
+        <div class="funnel-arrow">→</div>
+        <div class="funnel-node" style="background:var(--gray50);border-color:var(--gray100);color:var(--gray600);">Ensuredit (vendor)</div>
+        <div class="funnel-arrow">→</div>
+        <div class="funnel-node" style="background:var(--gray50);border-color:var(--gray100);color:var(--gray600);">API call 1: Vahaan data</div>
+        <div class="funnel-arrow">→</div>
+        <div class="funnel-node" style="background:var(--gray50);border-color:var(--gray100);color:var(--gray600);">API call 2: MMV mapping</div>
+        <div class="funnel-arrow">→</div>
+        <div class="funnel-node" style="background:var(--teal50);border-color:var(--teal100);color:var(--teal600);">Insurance quotes shown</div>
+      </div>
+
+      <div class="ba-grid">
+        <div class="ba-card ba-before">
+          <div class="ba-label">BEFORE — Ensuredit (vendor)</div>
+          <div style="font-size:11px;color:#7a2020;line-height:1.6;">
+            Two API calls per request via Ensuredit:<br>
+            1. Fetch vahaan vehicle details<br>
+            2. Map vehicle to insurer MMV masters<br><br>
+            Cost: <strong style="font-family:'IBM Plex Mono',monospace;">₹7 per request</strong><br>
+            Dependency: complete reliance on external vendor<br>
+            Scalability: cost grows linearly with traffic
+          </div>
+        </div>
+        <div class="ba-card ba-after">
+          <div class="ba-label">AFTER — In-house pipeline</div>
+          <div style="font-size:11px;color:var(--green800);line-height:1.6;">
+            1. Vahaan lookup via <strong>Signzy</strong> integration<br>
+            2. MMV mapping via internal <strong>BM25 engine</strong><br><br>
+            Vahaan cost: <strong style="font-family:'IBM Plex Mono',monospace;">₹0.80 per hit</strong><br>
+            MMV mapping: <strong>zero external cost</strong><br>
+            Full ownership + customisability
+          </div>
+        </div>
+      </div>
+
+      <div class="highlight-box h-amber" style="margin-top:12px;">
+        <strong>Today's user journey (powered by this solution):</strong> When a user visits Insure24 (Cars24's insurance platform) and enters their vehicle registration number, the system instantly fetches Vahaan records via Signzy, maps the vehicle to each insurer's MMV master internally, and returns insurance prices from Digit, ICICI, Tata, Kotak, and other providers — all without touching the Ensuredit vendor. This entire pipeline is owned and built in-house.
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-connector">↓</div>
+
+  <!-- PHASE 1: SIGNZY INTEGRATION -->
+  <div class="phase-block" id="p1">
+    <div class="phase-header open" onclick="toggle('p1')">
+      <div class="phase-num">01</div>
+      <div class="phase-dot dot-teal"></div>
+      <div class="phase-title-text">Vahaan data — Signzy integration</div>
+      <span class="phase-badge badge-teal">Research → Development</span>
+      <span class="chevron open" id="ch-p1">▶</span>
+    </div>
+    <div class="phase-body" id="b-p1">
+      <div class="cards-grid cards-auto">
+        <div class="card">
+          <div class="card-title">Signzy API</div>
+          <div class="card-body">Government Vahaan database lookup via Signzy — returns registered vehicle details: make, model, variant, fuel type, engine CC, GVW, registration details.</div>
+          <span class="card-tag tag-teal">₹0.80 per hit</span>
+        </div>
+        <div class="card">
+          <div class="card-title">Cost reduction</div>
+          <div class="card-body">From ₹7 per request (Ensuredit) to ₹0.80 per hit — 88.5% reduction in vehicle lookup cost at same data quality.</div>
+          <span class="card-tag tag-green">88.5% cheaper</span>
+        </div>
+        <div class="card">
+          <div class="card-title">Fields retrieved</div>
+          <div class="card-body">Vehicle make, model, variant, fuel type, cubic capacity (CC), gross vehicle weight (GVW), registration year, owner details.</div>
+          <span class="card-tag tag-blue">Structured data</span>
+        </div>
+        <div class="card">
+          <div class="card-title">Async integration</div>
+          <div class="card-body">Signzy calls implemented using Python async/await — reduces latency, enables concurrent lookups without blocking the FastAPI event loop.</div>
+          <span class="card-tag tag-purple">Non-blocking</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-connector">↓</div>
+
+  <!-- PHASE 2: THE MMV MAPPING PROBLEM -->
+  <div class="phase-block" id="p2">
+    <div class="phase-header open" onclick="toggle('p2')">
+      <div class="phase-num">02</div>
+      <div class="phase-dot dot-purple"></div>
+      <div class="phase-title-text">The MMV mapping problem — why it's hard</div>
+      <span class="phase-badge badge-purple">Problem Framing</span>
+      <span class="chevron open" id="ch-p2">▶</span>
+    </div>
+    <div class="phase-body" id="b-p2">
+
+      <div class="section-label">What is MMV mapping?</div>
+      <div class="highlight-box h-blue">
+        MMV = <strong>Make · Model · Variant</strong>. Each insurance provider (Digit, ICICI, Tata AIG, Kotak, etc.) maintains their own internal vehicle master dataset with different naming conventions. To generate an insurance quote, the Vahaan vehicle data must be matched to the correct row in each insurer's master — this is MMV mapping. A wrong match = wrong premium or quote failure.
+      </div>
+
+      <div class="section-label" style="margin-top:14px;">Why matching is non-trivial</div>
+      <div class="sub-grid" style="margin-top:0;">
+        <div class="mini-card"><strong>Different naming conventions</strong><span>Vahaan: "MARUTI SUZUKI SWIFT DZIRE VDI" · Insurer: "Swift Dzire VDI (D)" — same vehicle, completely different string representations.</span></div>
+        <div class="mini-card"><strong>Abbreviations &amp; expansions</strong><span>"BS4" vs "BSIV" vs "Bharat Stage IV" — emission norms written in multiple formats across different insurer masters.</span></div>
+        <div class="mini-card"><strong>Roman numerals</strong><span>Numeric variants like "1.2" vs "1200cc", "CNG" vs "CNG Kit", engine sizes expressed differently per insurer.</span></div>
+        <div class="mini-card"><strong>Partial matches</strong><span>Vahaan data is often truncated or abbreviated. Full variant names in insurer masters may not match any substring directly.</span></div>
+        <div class="mini-card"><strong>Inconsistent spacing</strong><span>Extra spaces, hyphens, slashes, mixed case — "Swift-Dzire" vs "Swift Dzire" vs "SWIFT DZIRE" all refer to the same vehicle.</span></div>
+        <div class="mini-card"><strong>Why RDBMS failed first</strong><span>Tried SQL LIKE / ILIKE queries initially — too slow at scale, no ranking of partial matches, couldn't handle fuzzy or keyword-weight based matching.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-connector">↓</div>
+
+  <!-- PHASE 3: BM25 ENGINE -->
+  <div class="phase-block" id="p3">
+    <div class="phase-header open" onclick="toggle('p3')">
+      <div class="phase-num">03</div>
+      <div class="phase-dot dot-purple"></div>
+      <div class="phase-title-text">BM25 matching engine — algorithm &amp; design</div>
+      <span class="phase-badge badge-purple">Core Engineering</span>
+      <span class="chevron open" id="ch-p3">▶</span>
+    </div>
+    <div class="phase-body" id="b-p3">
+
+      <div class="section-label">What is BM25?</div>
+      <div class="highlight-box h-purple">
+        <strong>BM25 (Best Match 25)</strong> is a probabilistic ranking function from information retrieval — the same algorithm that powers search engines like Elasticsearch and Solr. Given a query (Vahaan vehicle string) and a corpus (insurer master entries), it scores each document by how relevant it is to the query. It improves on simple TF-IDF by saturating term frequency (a word appearing 100 times isn't 100x more useful than appearing 5 times) and normalising for document length (short records shouldn't be penalised vs long ones).
+      </div>
+
+      <div class="section-label" style="margin-top:14px;">BM25 formula</div>
+      <div class="formula-box">
+Score(D, Q) = Σ IDF(qᵢ) · [ f(qᵢ, D) · (k₁ + 1) ] / [ f(qᵢ, D) + k₁ · (1 - b + b · |D|/avgdl) ]<br><br>
+<span class="formula-comment">where:</span><br>
+Q        = query terms from normalised Vahaan string<br>
+D        = a candidate entry in insurer MMV master<br>
+f(qᵢ, D) = frequency of term qᵢ in document D<br>
+IDF(qᵢ)  = log( (N - n(qᵢ) + 0.5) / (n(qᵢ) + 0.5) + 1 )<br>
+|D|      = length of document D (num tokens)<br>
+avgdl    = average document length across all masters<br>
+k₁ ≈ 1.5 = term frequency saturation parameter<br>
+b  ≈ 0.75 = document length normalisation parameter<br><br>
+<span class="formula-comment">→ Higher score = better match between Vahaan string and insurer record</span>
+      </div>
+
+      <div class="section-label" style="margin-top:14px;">Why BM25 over alternatives</div>
+      <div class="cards-grid cards-3">
+        <div class="card">
+          <div class="card-title">vs SQL LIKE / ILIKE</div>
+          <div class="card-body">LIKE requires exact substring presence. No partial credit, no ranking, slow at scale. BM25 ranks all candidates and returns best match.</div>
+          <span class="card-tag tag-red">LIKE — rejected</span>
+        </div>
+        <div class="card">
+          <div class="card-title">vs Simple TF-IDF</div>
+          <div class="card-body">TF-IDF doesn't saturate term frequency or normalise document length. BM25 handles both — more robust for short MMV strings.</div>
+          <span class="card-tag tag-amber">TF-IDF — limited</span>
+        </div>
+        <div class="card">
+          <div class="card-title">vs Embedding / semantic search</div>
+          <div class="card-body">Keyword-based matching is explainable and fast. Vehicle names are structured identifiers — semantic similarity less meaningful than keyword overlap.</div>
+          <span class="card-tag tag-teal">BM25 — chosen</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-connector">↓</div>
+
+  <!-- PHASE 4: STRING NORMALISATION -->
+  <div class="phase-block" id="p4">
+    <div class="phase-header open" onclick="toggle('p4')">
+      <div class="phase-num">04</div>
+      <div class="phase-dot dot-amber"></div>
+      <div class="phase-title-text">String normalisation &amp; preprocessing pipeline</div>
+      <span class="phase-badge badge-amber">Development</span>
+      <span class="chevron open" id="ch-p4">▶</span>
+    </div>
+    <div class="phase-body" id="b-p4">
+
+      <div class="section-label">Normalised string construction</div>
+      <div class="highlight-box h-amber">
+        A single normalised string was created by combining fields: <strong>Make + Model + Variant + Fuel Type + Cubic Capacity (CC) + Gross Vehicle Weight (GVW)</strong>. This combined string was created from both the Vahaan response and each insurer master row before BM25 matching — ensuring comparison is always string-to-string on the same feature space.
+      </div>
+
+      <div class="section-label" style="margin-top:14px;">Normalisation steps applied</div>
+      <div class="sub-grid" style="margin-top:0;">
+        <div class="mini-card"><strong>Lowercasing &amp; whitespace</strong><span>All text lowercased, extra spaces collapsed, leading/trailing whitespace stripped, hyphens and slashes standardised.</span></div>
+        <div class="mini-card"><strong>Abbreviation expansion</strong><span>Lookup table for common abbreviations: "CNG" → "compressed natural gas", "PET" → "petrol", "DSL" → "diesel", manufacturer abbreviations expanded.</span></div>
+        <div class="mini-card"><strong>Roman numeral normalisation</strong><span>BS4 ↔ BSIV, BS6 ↔ BSVI, variant numbers like "1.2L" → "1200cc" — handled via regex + lookup dictionary.</span></div>
+        <div class="mini-card"><strong>Special character removal</strong><span>Brackets, dots, commas, ampersands stripped or standardised — "(D)" → "diesel", "4WD" → "four wheel drive".</span></div>
+        <div class="mini-card"><strong>Stopword removal</strong><span>Insurance-domain stopwords removed before indexing — words like "limited", "edition", "series" that appear ubiquitously and carry low discriminative value.</span></div>
+        <div class="mini-card"><strong>Numeric normalisation</strong><span>Cubic capacity values aligned to consistent format (1200, 1500, 998 etc.), GVW aligned to kg units — prevents mismatches from unit inconsistencies.</span></div>
+      </div>
+
+      <div class="section-label" style="margin-top:12px;">Per-insurer master normalisation</div>
+      <div class="highlight-box h-blue">
+        Each insurer (Digit, ICICI, Tata AIG, Kotak, etc.) has its own vehicle master with unique formatting quirks. Separate normalisation rules were implemented and tested per insurer — the pipeline applies insurer-specific pre-processing before BM25 indexing, so each insurer master is cleaned against its own observed patterns rather than a single global rule set.
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-connector">↓</div>
+
+  <!-- PHASE 5: STORAGE & INDEXING -->
+  <div class="phase-block" id="p5">
+    <div class="phase-header open" onclick="toggle('p5')">
+      <div class="phase-num">05</div>
+      <div class="phase-dot dot-teal"></div>
+      <div class="phase-title-text">Storage &amp; indexing — MongoDB</div>
+      <span class="phase-badge badge-teal">Development</span>
+      <span class="chevron open" id="ch-p5">▶</span>
+    </div>
+    <div class="phase-body" id="b-p5">
+
+      <div class="section-label">Why RDBMS was tried and rejected first</div>
+      <div class="ba-grid">
+        <div class="ba-card ba-before">
+          <div class="ba-label">RDBMS (first attempt)</div>
+          <div style="font-size:11px;color:#7a2020;line-height:1.6;">
+            Tried PostgreSQL with LIKE / ILIKE queries<br>
+            → Very slow at scale for fuzzy matching<br>
+            → No ranking of partial matches<br>
+            → Full table scan for every lookup<br>
+            → Could not implement BM25 natively<br>
+            → Abandoned
+          </div>
+        </div>
+        <div class="ba-card ba-after">
+          <div class="ba-label">MongoDB (chosen)</div>
+          <div style="font-size:11px;color:var(--green800);line-height:1.6;">
+            Pre-indexed normalised master datasets<br>
+            → Flexible schema per insurer<br>
+            → Fast document retrieval<br>
+            → BM25 scoring done in Python layer<br>
+            → Efficient for keyword-based lookup<br>
+            → Fast reads at inference time
+          </div>
+        </div>
+      </div>
+
+      <div class="cards-grid cards-auto" style="margin-top:12px;">
+        <div class="card">
+          <div class="card-title">Indexed master datasets</div>
+          <div class="card-body">Each insurer's normalised MMV master stored as a MongoDB collection. Pre-processed at load time — inference queries fetch candidates and score with BM25 in Python.</div>
+          <span class="card-tag tag-teal">Per-insurer collections</span>
+        </div>
+        <div class="card">
+          <div class="card-title">BM25 index construction</div>
+          <div class="card-body">BM25 corpus built at service startup from MongoDB — tokenised master strings loaded into memory for fast scoring. Refreshed when insurer masters update.</div>
+          <span class="card-tag tag-purple">In-memory index</span>
+        </div>
+        <div class="card">
+          <div class="card-title">Efficient retrieval pattern</div>
+          <div class="card-body">Query: normalised Vahaan string → BM25 scoring over indexed insurer master → top-k candidates returned with scores → best match selected with threshold check.</div>
+          <span class="card-tag tag-blue">Top-k scoring</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-connector">↓</div>
+
+  <!-- PHASE 6: FASTAPI SERVICE -->
+  <div class="phase-block" id="p6">
+    <div class="phase-header open" onclick="toggle('p6')">
+      <div class="phase-num">06</div>
+      <div class="phase-dot dot-blue"></div>
+      <div class="phase-title-text">FastAPI service — architecture &amp; async optimisation</div>
+      <span class="phase-badge badge-blue">Development → Staging</span>
+      <span class="chevron open" id="ch-p6">▶</span>
+    </div>
+    <div class="phase-body" id="b-p6">
+
+      <div class="section-label">Request flow through the service</div>
+      <div class="funnel-row" style="flex-wrap:wrap;">
+        <div class="funnel-node" style="background:var(--blue50);border-color:var(--blue100);color:var(--blue600);font-size:10px;">Vehicle reg. no. received</div>
+        <div class="funnel-arrow">→</div>
+        <div class="funnel-node" style="background:var(--teal50);border-color:var(--teal100);color:var(--teal600);font-size:10px;">Signzy API (async)</div>
+        <div class="funnel-arrow">→</div>
+        <div class="funnel-node" style="background:var(--amber50);border-color:var(--amber100);color:var(--amber600);font-size:10px;">String normalisation</div>
+        <div class="funnel-arrow">→</div>
+        <div class="funnel-node" style="background:var(--purple50);border-color:var(--purple100);color:var(--purple600);font-size:10px;">BM25 scoring per insurer</div>
+        <div class="funnel-arrow">→</div>
+        <div class="funnel-node" style="background:var(--green50);border-color:var(--green100);color:var(--green600);font-size:10px;">MMV match + quote request</div>
+      </div>
+
+      <div class="sub-grid" style="margin-top:14px;">
+        <div class="mini-card"><strong>FastAPI framework</strong><span>Async-first Python web framework. Handles concurrent insurance quote requests without blocking — critical for Insure24's real-time UX.</span></div>
+        <div class="mini-card"><strong>Async Signzy calls</strong><span>Vehicle lookup uses asyncio — multiple registration lookups can be processed concurrently without waiting on each HTTP response sequentially.</span></div>
+        <div class="mini-card"><strong>Parallel insurer scoring</strong><span>BM25 matching against multiple insurer masters (Digit, ICICI, Tata, Kotak) runs concurrently using async tasks — reduced total inference latency significantly.</span></div>
+        <div class="mini-card"><strong>Human-in-the-loop validation</strong><span>Low-confidence BM25 matches (below threshold) flagged for manual review queue — ensures edge cases don't silently produce wrong quotes.</span></div>
+        <div class="mini-card"><strong>Threshold-based acceptance</strong><span>BM25 score threshold set empirically — matches above threshold accepted automatically, below threshold routed to validation or fallback logic.</span></div>
+        <div class="mini-card"><strong>Response caching</strong><span>Vehicle lookup results cached by registration number — avoids redundant Signzy API calls for the same vehicle within a session window.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-connector">↓</div>
+
+  <!-- PHASE 7: DEPLOYMENT -->
+  <div class="phase-block" id="p7">
+    <div class="phase-header open" onclick="toggle('p7')">
+      <div class="phase-num">07</div>
+      <div class="phase-dot dot-coral"></div>
+      <div class="phase-title-text">Deployment — EC2, GitHub Actions &amp; ArgoCD</div>
+      <span class="phase-badge badge-coral">Staging → Production</span>
+      <span class="chevron open" id="ch-p7">▶</span>
+    </div>
+    <div class="phase-body" id="b-p7">
+      <div class="cards-grid cards-auto">
+        <div class="card">
+          <div class="card-title">Amazon EC2</div>
+          <div class="card-body">FastAPI service deployed on EC2. Sized for production traffic from Insure24 platform — handles concurrent vehicle lookup and MMV scoring requests.</div>
+          <span class="card-tag tag-teal">Compute</span>
+        </div>
+        <div class="card">
+          <div class="card-title">GitHub Actions (CI/CD)</div>
+          <div class="card-body">Automated pipeline on push to main — run tests, build Docker image, push to registry, trigger ArgoCD sync to production cluster.</div>
+          <span class="card-tag tag-blue">CI/CD</span>
+        </div>
+        <div class="card">
+          <div class="card-title">ArgoCD</div>
+          <div class="card-body">GitOps-based continuous delivery — Kubernetes manifest changes in Git automatically reconciled to the live cluster. Declarative, auditable deployments.</div>
+          <span class="card-tag tag-purple">GitOps</span>
+        </div>
+        <div class="card">
+          <div class="card-title">Standalone GitHub repo</div>
+          <div class="card-body">After the production incident (see Phase 8), service migrated to its own isolated repository — no shared deployment conflicts with other rule-based applications.</div>
+          <span class="card-tag tag-amber">Isolation</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-connector">↓</div>
+
+  <!-- PHASE 8: PRODUCTION INCIDENT -->
+  <div class="phase-block" id="p8">
+    <div class="phase-header open" onclick="toggle('p8')">
+      <div class="phase-num">08</div>
+      <div class="phase-dot dot-red"></div>
+      <div class="phase-title-text">Production incident — Insure24 outage &amp; resolution</div>
+      <span class="phase-badge badge-red">Incident + Learning</span>
+      <span class="chevron open" id="ch-p8">▶</span>
+    </div>
+    <div class="phase-body" id="b-p8">
+
+      <div class="incident-block">
+        <div class="incident-title">
+          <span style="font-size:14px;">⚠</span>
+          Production outage — Insure24 platform down 4–5 hours
+        </div>
+        <div class="incident-body">
+          To save infrastructure cost, the MMV mapping service was initially deployed in a shared GitHub repository alongside multiple other rule-based applications. A change to a shared dependency or deployment configuration in that repo caused a conflict — the MMV mapping service broke in production, taking down the Insure24 insurance platform for 4–5 hours. This was a critical business impact incident as users could not get insurance quotes.
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top:14px;">Resolution steps (led end-to-end)</div>
+      <div class="sub-grid" style="margin-top:0;">
+        <div class="mini-card"><strong>Immediate triage</strong><span>Identified root cause as shared repo deployment conflict — conflicting dependency versions from another application in the same repo.</span></div>
+        <div class="mini-card"><strong>Worked through the night</strong><span>Sat day and night to isolate, fix, and restore the service — Insure24 was restored within the outage window before business hours.</span></div>
+        <div class="mini-card"><strong>Repository migration</strong><span>Moved entire MMV mapping service to a dedicated standalone GitHub repository — complete decoupling from all other applications.</span></div>
+        <div class="mini-card"><strong>Independent CI/CD pipeline</strong><span>New GitHub Actions workflow created for the standalone repo — no shared steps, no shared dependencies with other services.</span></div>
+        <div class="mini-card"><strong>Async refactor</strong><span>During the migration, also refactored synchronous calls to async — reduced inference latency as a side benefit of the incident-driven work.</span></div>
+        <div class="mini-card"><strong>Deployment standards</strong><span>Established the rule: each production service must have its own repository. No shared deployment repos for distinct production services.</span></div>
+      </div>
+
+      <div class="highlight-box h-teal" style="margin-top:12px;">
+        <strong>Key learning for interview:</strong> This incident demonstrated end-to-end ownership — not just building but maintaining, debugging, and improving a production system under pressure. The async refactor that came out of this work also permanently improved the service's inference latency. Cost-cutting shortcuts in infrastructure have non-linear risk when the service is customer-facing.
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-connector">↓</div>
+
+  <!-- PHASE 9: HUMAN IN THE LOOP -->
+  <div class="phase-block" id="p9">
+    <div class="phase-header open" onclick="toggle('p9')">
+      <div class="phase-num">09</div>
+      <div class="phase-dot dot-amber"></div>
+      <div class="phase-title-text">Human-in-the-loop validation &amp; accuracy</div>
+      <span class="phase-badge badge-amber">Production</span>
+      <span class="chevron open" id="ch-p9">▶</span>
+    </div>
+    <div class="phase-body" id="b-p9">
+      <div class="cards-grid cards-3">
+        <div class="card">
+          <div class="card-title">Automated high-confidence path</div>
+          <div class="card-body">BM25 score above threshold → match accepted automatically, MMV mapping pushed to insurer quote API immediately without human review.</div>
+          <span class="card-tag tag-green">Auto-accepted</span>
+        </div>
+        <div class="card">
+          <div class="card-title">Low-confidence review queue</div>
+          <div class="card-body">BM25 score below threshold → top-3 candidates surfaced to human reviewer. Reviewer selects correct match. Feedback used to improve normalisation rules.</div>
+          <span class="card-tag tag-amber">Manual review</span>
+        </div>
+        <div class="card">
+          <div class="card-title">Continuous improvement loop</div>
+          <div class="card-body">Reviewed matches fed back into normalisation rules and insurer-specific dictionaries — accuracy improved iteratively over time post-launch.</div>
+          <span class="card-tag tag-purple">Feedback loop</span>
+        </div>
+      </div>
+      <div class="highlight-box h-green" style="margin-top:12px;">
+        <strong>Result:</strong> Over 95% MMV mapping accuracy achieved with human-in-the-loop validation. The combination of BM25 automated matching + expert review on edge cases was key to reaching production-grade accuracy without needing a massive labelled training dataset upfront.
+      </div>
+    </div>
+  </div>
+
+  <div class="phase-connector">↓</div>
+
+  <!-- PHASE 10: IMPACT -->
+  <div class="phase-block" id="p10">
+    <div class="phase-header open" onclick="toggle('p10')">
+      <div class="phase-num">10</div>
+      <div class="phase-dot dot-green"></div>
+      <div class="phase-title-text">Business impact &amp; results</div>
+      <span class="phase-badge badge-green">Results</span>
+      <span class="chevron open" id="ch-p10">▶</span>
+    </div>
+    <div class="phase-body" id="b-p10">
+      <div class="impact-grid">
+        <div class="impact-card">
+          <div class="impact-num">₹1.5Cr</div>
+          <div class="impact-label">Annual savings from vendor elimination</div>
+        </div>
+        <div class="impact-card">
+          <div class="impact-num">&gt;95%</div>
+          <div class="impact-label">MMV mapping accuracy in production</div>
+        </div>
+        <div class="impact-card">
+          <div class="impact-num">₹0.80</div>
+          <div class="impact-label">Cost per Vahaan hit (from ₹7)</div>
+        </div>
+        <div class="impact-card">
+          <div class="impact-num">0</div>
+          <div class="impact-label">External vendor dependency for MMV mapping</div>
+        </div>
+      </div>
+
+      <div class="highlight-box h-teal">
+        <br>1. Full ownership — designed, built, deployed, and maintained the entire pipeline solo.
+        <br>2. Technical depth — moved from RDBMS → MongoDB + BM25 after empirically identifying the right tool for the job.
+        <br>3. Production realism — handled a live outage, migrated the service, and improved it under pressure.
+        <br>4. Business integration — the solution powers the live Insure24 platform at Cars24 today.
+        <br>5. Cost impact — ₹1.5Cr annual saving is concrete, measurable, and tied directly to the engineering decision to go in-house.
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    In-House Vahaan &amp; MMV Mapping Pipeline · Insure24 · Cars24 · System Design Document
+  </div>
+</div>
+
+<script>
+  function toggle(id) {
+    const body = document.getElementById('b-' + id);
+    const ch = document.getElementById('ch-' + id);
+    const header = ch.closest('.phase-header');
+    const isOpen = !body.classList.contains('collapsed');
+    body.classList.toggle('collapsed', isOpen);
+    ch.classList.toggle('open', !isOpen);
+    header.classList.toggle('open', !isOpen);
+  }
+  function expandAll() {
+    document.querySelectorAll('.phase-body').forEach(b => b.classList.remove('collapsed'));
+    document.querySelectorAll('.chevron').forEach(c => c.classList.add('open'));
+    document.querySelectorAll('.phase-header').forEach(h => h.classList.add('open'));
+  }
+  function collapseAll() {
+    document.querySelectorAll('.phase-body').forEach(b => b.classList.add('collapsed'));
+    document.querySelectorAll('.chevron').forEach(c => c.classList.remove('open'));
+    document.querySelectorAll('.phase-header').forEach(h => h.classList.remove('open'));
+  }
+</script>
+</body>
+</html>
